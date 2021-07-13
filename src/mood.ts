@@ -10,6 +10,7 @@ import {
   itemAmount,
   mallPrice,
   mpCost,
+  myEffects,
   myHp,
   myMaxmp,
   myMp,
@@ -23,7 +24,7 @@ import {
 } from "kolmafia";
 import { have } from "./lib";
 import { get } from "./property";
-import { $item, $skill } from "./template-string";
+import { $class, $item, $skill } from "./template-string";
 import { clamp } from "./utils";
 
 export abstract class MpSource {
@@ -134,6 +135,30 @@ class SkillMoodElement extends MoodElement {
 
     if (!haveSkill(this.skill)) return false;
     if (initialTurns >= ensureTurns) return true;
+
+    // Deal with song slots.
+    if (
+      mood.options.songSlots.length > 0 &&
+      this.skill.class === $class`Accordion Thief` &&
+      this.skill.buff
+    ) {
+      for (const otherEffectName of Object.keys(myEffects())) {
+        const otherEffect = Effect.get(otherEffectName);
+        if (otherEffect === effect) continue;
+        const otherSkill = toSkill(otherEffect);
+        if (
+          otherSkill !== $skill`none` &&
+          otherSkill.class === $class`Accordion Thief` &&
+          otherSkill.buff
+        ) {
+          const slot = mood.options.songSlots.find((slot) =>
+            slot.includes(otherEffect)
+          );
+          if (!slot || slot.includes(effect))
+            cliExecute(`shrug ${otherEffect}`);
+        }
+      }
+    }
 
     let oldRemainingCasts = -1;
     let remainingCasts = Math.ceil(
